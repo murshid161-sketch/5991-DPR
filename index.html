@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DPR – MEW-5991 | L&T Construction</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0c0c0c; font-family: 'Segoe UI', system-ui, sans-serif; color: #d0d0d0; }
+    input, select, button { font-family: inherit; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #111; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ── STATUS ───────────────────────────────────────────────────────────────────
+const IP = "ip", DONE = "done";
+
+const ACTS = [
+  { key:"asm",    name:"Tower Assembly" },
+  { key:"boxp",   name:"Tower Box Preparation" },
+  { key:"torqb",  name:"Torque Painting Box" },
+  { key:"paint",  name:"Tower Box Painting" },
+  { key:"half",   name:"Half Erection" },
+  { key:"full",   name:"Full Erection" },
+  { key:"tight",  name:"Full Tower Tightening" },
+  { key:"torqi",  name:"Full Tower Torque Inspection" },
+  { key:"megger", name:"Megger" },
+];
+
+const ALL_TOWERS = {
+  item1: ["1B/0","1B/1","1B/2","1A/0","1A/1","1A/2","1A/3","1A/4","2/0","2/1A","2/1","2/2","2/3","2/4","3/0","3/1","3/2","3/3","3/3A","3/4","3/5","3/6","3/7","3/8","3/9","3/10","3/11","4/0","4/1","4/2","4/3","4/4","4/5","5/0","5/1","6/0","6/1","6/2","7/0","7/1","7/2","7/3","8/0","8/1","8/2","8/3","8/4","8/5","8/6","8/7","8/8","8/9","8/10","8/11","8/12","8/13","8/14","8/15","8/16","8/17","8/18","8/19","8/20","8/21","8/22","8/23","8/24","8/25","8/26","8/27","8/28","8/29","8/30","8/31","8/32","8/31N","8/31A","8/32N","8/33N","8/33","8/34","8/35","8/36","8/37","8/38","8/39","8/40","8/41","8/42","8/43","8/44","9/0","10/0","10/1","10/2","10/3","10/4","10/5","10/6","10/7","10A/7","10/8","10/9","10/10","10/11","10/12","10/13","10/14","10/15","10/16","10/17","10/18","10/19","10/20","10/21","10/22","10/23","10/24","10/25","10/26","10/27","10/28","10/29","10/30","10/31","10/32","10/33","10/34","10/35","10/36","11/0","12/0"],
+  item2: ["GT","1/0","2/0","2/1","2/2","2/3","2A/0","2A/1","2A/2","2A/3","3/0","3/1","3/2","3/3","3/4","3/5","3/6","3/7","3/8","3/8A","3/8B","3/8C","3/8D","GC-1","3/9","3/10","3/11","3/12","3/13","4/0","4/1","4A/0","5/0","5/1","5/2","5/3","5/4","5/5","5/6","5/7","5/8","5/9","5/10","5/11","6/0","6/1","7/0","7/2","7/3","7/4","7/5","7/6","7/7","7/8","7/9","7/10","7/11","7/12","7/13","7/14","7/15","7/16","7/17","7/18","7/19","7/20","7/21","7/22","7/23","7/24","7/25","7/26","7/27","7/28","7/29","7/30","7/31","7/32","7/33","7/34","7/35","7/36","7/37","7/38","7/39","7/40","7/41","7/42","7/43","7/44","7/45","7/46","7/47","7/48","8/0","8/1","8/2","8/3","8/4","8/5","8/6","8/7","8/8","8/9","8/10","8/11","8A/0","8A/1","8A/2","8A/3","8A/4","8A/5","8A/6","8A/7","8A/8","8A/9","8A/10","8A/11","8A/12","8A/13","8A/14","8A/15","8A/16","8A/17","8A/18","8A/19","8A/20","8A/21","8A/22","8A/23","8A/24","8A/25","8A/26","8A/27","8A/28","8A/29","8A/30","8A/31","8A/32","8A/33","8A/34","8A/35","8A/36","8A/37","8A/38","9/0","9/1","9/2","10/0","10/1","10/2","10/3","11/0","11/1","11/2","11/3","11/4","11/5","11/6","11/7","11/8","11/9","11/10","11/11","11/12","11/13","12/0","12/1","12/2","12/3","12/4","12/5","12/6","12/7","13/0","14/0","14/1","14/2","14/3","14/4","14/5","15/0","15/1","16/0","17/0","17/1","17/2","17/3","17/4","17/5","17/6","17/7","17/8","17/9","17/10","17/11","17/12","17/13","17/14","17/15","17/16","17/17","17/18","17/19","18/0","18/1","18/2","18/3","18/4","18/5","18/6","18/7","18/8","18/9","18/10","18/11","18/12","18/13","18/14","18/15","18/16","18/17","18/18","19/0","19/1","19/2","20/0","20/1","21/0","22/0"],
+};
+
+// Background seed from Mar-18 — silent, shows in Excel only, no chips
+const BG_DONE = {
+  item1: {
+    asm:  ["1B/0","1A/1","1A/2","1A/3","3/1","3/2","3/3","3/5","3/6","3/7","3/8","3/9","3/10","3/11","4/0","4/1","4/2","4/4","4/5","5/0","5/1","7/0","7/1","7/2","7/3","8/0","8/1","8/2","8/3","8/4","8/5","8/6","8/7","8/8","8/9","8/10","8/11","8/12","8/13","8/14","8/15","8/16","8/17","8/18","8/19","8/20","8/21","8/22","8/25","8/26","8/27","8/28","8/29","8/30","8/33","8/34","8/35","8/36","8/37","8/38","8/39","8/40","8/41","8/42","8/43","8/44","9/0","10/0","10/1","10/2","10/3","10/4","10/5","10/6","10/7","10A/7","10/8","10/9","10/10","10/11","10/12","10/13","10/14","10/15","10/16","10/17","10/18","10/19","10/20","10/21","10/22","10/23","10/24","10/25","10/26","10/27","10/28","10/29","10/30","10/31","10/32","10/33","10/34","10/35","10/36","11/0","12/0"],
+    half: ["1B/0","1A/1","1A/2","1A/3","3/1","3/2","3/3","3/5","3/6","3/7","3/8","3/9","3/10","3/11","4/0","4/1","4/2","4/4","4/5","5/0","5/1","7/1","7/2","7/3","8/0","8/1","8/2","8/3","8/4","8/5","8/6","8/7","8/8","8/9","8/10","8/11","8/12","8/13","8/14","8/15","8/16","8/17","8/18","8/19","8/20","8/21","8/22","8/25","8/26","8/27","8/28","8/29","8/30","8/34","8/35","8/36","8/37","8/38","8/39","8/40","8/41","8/42","8/43","8/44","9/0","10/0","10/1","10/2","10/3","10/4","10/5","10/6","10/7","10A/7","10/8","10/9","10/10","10/11","10/12","10/13","10/14","10/15","10/16","10/17","10/18","10/19","10/20","10/21","10/22","10/23","10/24","10/25","10/26","10/27","10/28","10/29","10/30","10/31","10/32","10/33","10/34","10/35","10/36","11/0","12/0"],
+    full: ["1B/0","1A/1","1A/2","1A/3","3/1","3/2","3/3","3/5","3/6","3/7","3/8","3/9","3/10","3/11","4/0","4/1","4/2","4/4","4/5","5/0","5/1","7/1","7/2","7/3","8/0","8/1","8/2","8/3","8/4","8/5","8/6","8/7","8/8","8/9","8/10","8/11","8/12","8/13","8/14","8/15","8/16","8/17","8/18","8/19","8/20","8/21","8/22","8/25","8/26","8/27","8/28","8/29","8/30","8/34","8/35","8/36","8/37","8/38","8/39","8/40","8/41","8/42","8/43","8/44","9/0","10/0","10/1","10/2","10/3","10/4","10/5","10/6","10/7","10A/7","10/8","10/9","10/10","10/11","10/12","10/13","10/14","10/15","10/16","10/17","10/18","10/19","10/20","10/21","10/22","10/23","10/24","10/25","10/26","10/27","10/28","10/29","10/30","10/31","10/32","10/33","10/34","10/35","10/36","11/0"],
+    tight:["3/5","3/6","3/7","3/8","3/9","3/10","7/1","7/2","7/3","8/0","8/1","8/2","8/3","8/4","8/5","8/6","8/7","8/8","8/9","8/10","8/11","8/12","8/13","8/14","8/15","8/16","8/17","8/18","8/19","8/20","8/21","8/26","8/27","8/28","8/29","8/40","8/41","8/42","8/43","8/44","9/0","10/0","10/1","10/2","10/3","10/4","10/5","10/6","10/7","10A/7","10/8","10/9","10/10","10/11","10/12","10/13","10/14","10/15","10/16","10/17","10/18","10/19","10/20","10/21","10/22","10/23","10/24","10/25","10/26","10/27","10/28","10/29","10/30","10/31","10/32","10/33","10/34","10/35","10/36","11/0"],
+    paint:["1B/0","1A/1","1A/2","1A/3","3/1","3/2","3/3","3/5","3/6","3/7","3/8","3/9","3/10","3/11","4/5","5/0","5/1","7/1","7/2","7/3","8/0","8/1","8/2","8/3","8/4","8/5","8/6","8/7","8/8","8/9","8/10","8/11","8/12","8/13","8/14","8/15","8/16","8/17","8/18","8/19","8/20","8/21","8/22","8/25","8/26","8/27","8/28","8/29","8/30","8/34","8/35","8/36","8/37","8/38","8/41","8/42","8/43","8/44","9/0","10/0","10/1","10/2","10/3","10/4","10/5","10/6","10/7","10A/7","10/8","10/9","10/10","10/11","10/12","10/13","10/14","10/15","10/16","10/17","10/18","10/19","10/20","10/21","10/22","10/23","10/24","10/25","10/26","10/27","10/28","10/29","10/30","10/31","10/32","10/33","10/34","10/35","10/36","11/0"],
+    boxp:[],torqb:[],torqi:[],megger:[],
+  },
+  item2: {
+    asm:  ["2/2","2/3","2A/0","2A/1","2A/2","2A/3","3/0","3/1","3/11","3/12","3/13","4/0","4/1","4A/0","5/1","5/2","5/3","5/4","5/5","5/6","5/7","5/8","5/9","5/10","5/11","7/2","7/3","7/4","7/5","7/6","7/7","7/8","7/9","7/10","7/11","7/12","7/13","7/14","7/15","7/16","7/17","7/18","7/19","7/20","7/21","7/22","7/23","7/24","7/25","7/26"],
+    half: ["2/2","2/3","2A/0","2A/1","2A/2","2A/3","3/0","3/1","3/11","3/12","3/13","4/0","4/1","4A/0","5/1","5/2","5/3","5/4","5/5","5/6","5/7","5/8","5/9","5/10","5/11","7/5","7/6","7/7","7/8","7/9","7/10","7/11","7/12","7/13","7/14","7/15","7/16","7/18"],
+    full: ["2/2","2/3","2A/0","2A/1","2A/2","2A/3","3/0","3/1","3/11","3/12","3/13","4/0","4/1","4A/0","5/1","5/2","5/3","5/4","5/5","5/6","5/7","5/8","5/9","5/10","5/11"],
+    tight:[],
+    paint:["2/2","2/3","2A/0","2A/1","2A/2","2A/3","3/0","3/1","3/11","3/12","3/13","4/0","4/1","4A/0","5/1","5/2","5/3","5/4","5/5","5/6","5/7","5/8","5/9","5/10","5/11","7/5","7/6","7/7","7/8","7/9","7/10","7/11","7/12","7/14","7/15","7/16","7/17"],
+    boxp:[],torqb:[],torqi:[],megger:[],
+  },
+};
+
+const SK = "dpr_mew5991_v6";
+const todayStr = () => new Date().toISOString().split("T")[0];
+const AMBER="#F5A623", GREEN="#3fb950", YELLOW="#f0c040";
+const BG="#0c0c0c", CARD="#141414", BORDER="#1e1e1e";
+const TEXT="#d0d0d0", MUTED="#4a4a4a", NAVY="#1a3a5c";
+const mono = '"Courier New", monospace';
+
+function countDone(item, key, daily) {
+  return new Set([...(BG_DONE[item][key]||[]), ...(daily[item][key]?.done||[])]).size;
+}
+
+function Chip({ loc, status, onToggle, onRemove }) {
+  const s = {
+    [IP]:   {bg:"#2e2200",fg:YELLOW,border:"#6b4f00",icon:"▶"},
+    [DONE]: {bg:"#0a2410",fg:GREEN, border:"#155a25",icon:"✓"},
+    none:   {bg:"#1a1a1a",fg:"#666",border:"#2a2a2a",icon:""},
+  }[status||"none"];
+  return (
+    <div style={{position:"relative",display:"inline-flex",margin:"3px"}}>
+      <button onClick={onToggle} style={{
+        background:s.bg, color:s.fg, border:`1.5px solid ${s.border}`,
+        borderRadius:7, padding:"6px 10px", cursor:"pointer",
+        fontFamily:mono, fontSize:12, fontWeight:700,
+        display:"flex", alignItems:"center", gap:5,
+        boxShadow:status?`0 0 8px ${s.border}88`:"none",
+        transition:"all 0.12s", userSelect:"none",
+      }}>
+        {s.icon && <span style={{fontSize:10}}>{s.icon}</span>}
+        {loc}
+      </button>
+      <button onClick={onRemove} style={{
+        position:"absolute", top:-6, right:-6,
+        width:16, height:16, borderRadius:"50%",
+        background:"#2a2a2a", border:"1px solid #444",
+        color:"#888", fontSize:9, cursor:"pointer",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        padding:0, lineHeight:1,
+      }}>✕</button>
+    </div>
+  );
+}
+
+function App() {
+  const emptyDaily = () => {
+    const d = {item1:{}, item2:{}};
+    ["item1","item2"].forEach(it => ACTS.forEach(a => { d[it][a.key] = {done:[],ip:[]}; }));
+    return d;
+  };
+
+  const [daily, setDaily]   = useState(null);
+  const [tab, setTab]       = useState("item1");
+  const [date, setDate]     = useState(todayStr());
+  const [weather, setWeather] = useState("Sunny");
+  const [temp, setTemp]     = useState("32°C / 46°C");
+  const [inputs, setInputs] = useState({});
+  const [errors, setErrors] = useState({});
+  const [toast, setToast]   = useState("");
+  const refs = useRef({});
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SK);
+      setDaily(raw ? JSON.parse(raw) : emptyDaily());
+    } catch { setDaily(emptyDaily()); }
+  }, []);
+
+  function persist(next) {
+    setDaily(next);
+    try { localStorage.setItem(SK, JSON.stringify(next)); } catch {}
+  }
+
+  function flash(msg) { setToast(msg); setTimeout(()=>setToast(""), 2200); }
+
+  function chips(item, key) {
+    const d = daily[item][key];
+    const all = [...new Set([...d.done,...d.ip])];
+    return all.sort((a,b) => ALL_TOWERS[item].indexOf(a) - ALL_TOWERS[item].indexOf(b));
+  }
+
+  function chipStatus(item, key, loc) {
+    if (daily[item][key].done.includes(loc)) return DONE;
+    if (daily[item][key].ip.includes(loc))   return IP;
+    return null;
+  }
+
+  function toggle(item, key, loc) {
+    const cur = chipStatus(item, key, loc);
+    const d = daily[item][key];
+    let nd = [...d.done], ni = [...d.ip];
+    if (cur===DONE)    { nd=nd.filter(x=>x!==loc); ni.push(loc); }
+    else if (cur===IP) { ni=ni.filter(x=>x!==loc); nd.push(loc); }
+    else               { nd.push(loc); }
+    persist({...daily,[item]:{...daily[item],[key]:{done:nd,ip:ni}}});
+  }
+
+  function remove(item, key, loc) {
+    const d = daily[item][key];
+    persist({...daily,[item]:{...daily[item],[key]:{
+      done:d.done.filter(x=>x!==loc), ip:d.ip.filter(x=>x!==loc),
+    }}});
+  }
+
+  function addChips(item, key, startAs) {
+    const raw = (inputs[`${item}_${key}`]||"").trim();
+    if (!raw) return;
+    const tokens = raw.split(/[,\s;]+/).map(s=>s.trim()).filter(Boolean);
+    const vs = new Set(ALL_TOWERS[item]);
+    const valid   = tokens.filter(t=>vs.has(t));
+    const invalid = tokens.filter(t=>!vs.has(t));
+    if (invalid.length) {
+      setErrors(e=>({...e,[`${item}_${key}`]:`Not found: ${invalid.join(", ")}`}));
+      setTimeout(()=>setErrors(e=>{const n={...e};delete n[`${item}_${key}`];return n;}),3500);
+    }
+    if (!valid.length) return;
+    const d = daily[item][key];
+    const existing = new Set([...d.done,...d.ip]);
+    const toAdd = valid.filter(t=>!existing.has(t));
+    if (!toAdd.length) { flash("All entered towers already added"); return; }
+    const updated = {
+      done: startAs===DONE ? [...d.done,...toAdd] : [...d.done],
+      ip:   startAs===IP   ? [...d.ip,...toAdd]   : [...d.ip],
+    };
+    persist({...daily,[item]:{...daily[item],[key]:updated}});
+    setInputs(q=>({...q,[`${item}_${key}`]:""}));
+    flash(`${toAdd.length} tower${toAdd.length>1?"s":""} added — tap chip to change status`);
+    refs.current[`${item}_${key}`]?.focus();
+  }
+
+  function downloadExcel() {
+    if (!daily) return;
+    const wb = XLSX.utils.book_new();
+    ["item1","item2"].forEach(item => {
+      const towers = ALL_TOWERS[item];
+      const label = item==="item1"
+        ? "Item 1 – Khiran P/Stn to Wafra 'Z' SS"
+        : "Item 2 – Wafra 'Z' S/Stn to Sulaibiya 'Z' S/Stn";
+      const dataRows = ACTS.map((act,i) => {
+        const bgD = new Set(BG_DONE[item][act.key]||[]);
+        const dyD = new Set(daily[item][act.key].done);
+        const dyI = new Set(daily[item][act.key].ip);
+        return [i+1, act.name, ...towers.map(t=>
+          dyD.has(t)||bgD.has(t)?"✓": dyI.has(t)?"▶":""
+        )];
+      });
+      const totRow=["","TOTAL DONE →",...towers.map((_,ci)=>dataRows.reduce((s,r)=>s+(r[ci+2]==="✓"?1:0),0))];
+      const ipRow =["","IN PROGRESS →",...towers.map((_,ci)=>dataRows.reduce((s,r)=>s+(r[ci+2]==="▶"?1:0),0))];
+      const aoa = [[`MEW-5991 | ${label} | As on ${date}`],["#","Activity",...towers],...dataRows,totRow,ipRow];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"]=[{wch:4},{wch:30},...towers.map(()=>({wch:7}))];
+      XLSX.utils.book_append_sheet(wb, ws, item==="item1"?"Item 1":"Item 2");
+    });
+    const out = XLSX.write(wb,{bookType:"xlsx",type:"array"});
+    const url = URL.createObjectURL(new Blob([out],{type:"application/octet-stream"}));
+    Object.assign(document.createElement("a"),{href:url,download:`DPR-MEW5991-${date}.xlsx`}).click();
+    URL.revokeObjectURL(url);
+    flash("📥 Excel downloaded!");
+  }
+
+  function downloadPNG() {
+    if (!daily) return;
+
+    const W = 1100, PAD = 22;
+    const HEADER_H = 64;
+    const TABLE_HEADER_H = 26;
+    const FOOTER_H = 34;
+
+    // Pre-calculate all row data for both items combined
+    const allRows = [];
+    ["item1","item2"].forEach(item => {
+      const towers = ALL_TOWERS[item], total = towers.length;
+      const itemLabel = item === "item1" ? "Item 1" : "Item 2";
+      ACTS.forEach(act => {
+        const bgD = new Set(BG_DONE[item][act.key] || []);
+        const dyD = new Set(daily[item][act.key].done);
+        const dyI = new Set(daily[item][act.key].ip);
+        const doneSet = new Set([...bgD, ...dyD]);
+        const ipTowers = [...dyI].filter(t => !doneSet.has(t));
+        const doneTowers = [...doneSet];
+        const done = doneSet.size;
+        const ip = ipTowers.length;
+        const pct = total > 0 ? done / total * 100 : 0;
+        allRows.push({ item, itemLabel, act, total, done, ip, doneTowers, ipTowers, pct });
+      });
+    });
+
+    // Measure tower text lines needed per row
+    const cv0 = document.createElement("canvas");
+    const g0 = cv0.getContext("2d");
+    g0.font = "10px monospace";
+    const towerColW = 420;
+    function wrapTowers(doneArr, ipArr) {
+      // Build a combined label string: ✓ t1, t2... ▶ t3, t4...
+      const lines = [];
+      const maxCharsPerLine = Math.floor(towerColW / 7.2);
+      const addLines = (towers, prefix) => {
+        if (!towers.length) return;
+        let cur = prefix + " ";
+        towers.forEach((t, i) => {
+          const part = t + (i < towers.length - 1 ? ", " : "");
+          if ((cur + part).length > maxCharsPerLine && cur.trim().length > prefix.length) {
+            lines.push({ text: cur.trimEnd(), isDone: prefix === "✓", isIP: prefix === "▶" });
+            cur = "  " + part;
+          } else {
+            cur += part;
+          }
+        });
+        if (cur.trim()) lines.push({ text: cur.trimEnd(), isDone: prefix === "✓", isIP: prefix === "▶" });
+      };
+      addLines(doneArr, "✓");
+      addLines(ipArr, "▶");
+      return lines.length ? lines : null;
+    }
+
+    const MIN_ROW_H = 38;
+    const LINE_H = 15;
+    const rowMeta = allRows.map(row => {
+      const lines = wrapTowers(row.doneTowers, row.ipTowers);
+      const extraLines = lines ? Math.max(0, lines.length - 1) : 0;
+      const h = MIN_ROW_H + extraLines * LINE_H;
+      return { ...row, lines, h };
+    });
+
+    const totalRowsH = rowMeta.reduce((s, r) => s + r.h, 0);
+    const H = HEADER_H + TABLE_HEADER_H + totalRowsH + FOOTER_H + 10;
+
+    const cv = document.createElement("canvas");
+    cv.width = W; cv.height = H;
+    const g = cv.getContext("2d");
+
+    // BG
+    g.fillStyle = BG; g.fillRect(0, 0, W, H);
+
+    // Header bar
+    g.fillStyle = AMBER; g.fillRect(0, 0, W, HEADER_H);
+    g.fillStyle = "#000"; g.font = `bold 20px sans-serif`; g.textAlign = "left";
+    g.fillText("DAILY PROGRESS REPORT  ·  MEW/C/5991", PAD, 28);
+    g.font = `11px sans-serif`;
+    g.fillText(`${date}  ·  ${weather}  ·  ${temp}  ·  L&T Construction  ·  400kV OHL Kuwait`, PAD, 50);
+
+    // Column layout: Item | Activity | Done | In Prog | Remaining | % | Progress | Towers
+    const cols = [
+      { label: "Item",      w: 56  },
+      { label: "Activity",  w: 160 },
+      { label: "Done",      w: 52  },
+      { label: "In Prog",   w: 58  },
+      { label: "Remaining", w: 74  },
+      { label: "% Done",    w: 68  },
+      { label: "Progress",  w: 0   }, // flex remaining
+      { label: "Towers (Done ✓ / In Progress ▶)", w: towerColW },
+    ];
+    const fixedW = cols.slice(0, -1).reduce((s, c) => s + c.w, 0);
+    cols[6].w = W - PAD * 2 - fixedW - towerColW;
+
+    // Table header
+    let y = HEADER_H;
+    g.fillStyle = "#191919"; g.fillRect(PAD, y, W - PAD * 2, TABLE_HEADER_H);
+    let x = PAD;
+    cols.forEach((col, i) => {
+      g.fillStyle = "#666"; g.font = `bold 9px sans-serif`;
+      g.textAlign = i < 2 ? "left" : "center";
+      g.fillText(col.label, i < 2 ? x + 6 : x + col.w / 2, y + 17);
+      x += col.w;
+    });
+    y += TABLE_HEADER_H;
+
+    // Rows
+    rowMeta.forEach((row, ri) => {
+      const rowH = row.h;
+      g.fillStyle = ri % 2 === 0 ? CARD : "#111";
+      g.fillRect(PAD, y, W - PAD * 2, rowH);
+
+      // Subtle item separator line
+      if (ri === ACTS.length) {
+        g.fillStyle = AMBER + "44";
+        g.fillRect(PAD, y, W - PAD * 2, 2);
+      }
+
+      x = PAD;
+      const midY = y + rowH / 2 + 5;
+
+      // Item col
+      const itemColor = row.item === "item1" ? "#7eb8f7" : "#f7a97e";
+      g.fillStyle = itemColor; g.font = `bold 10px sans-serif`; g.textAlign = "center";
+      g.fillText(row.itemLabel, x + cols[0].w / 2, midY); x += cols[0].w;
+
+      // Activity
+      g.fillStyle = TEXT; g.font = `11px sans-serif`; g.textAlign = "left";
+      g.fillText(row.act.name, x + 6, midY); x += cols[1].w;
+
+      // Done count
+      g.fillStyle = GREEN; g.font = `bold 13px monospace`; g.textAlign = "center";
+      g.fillText(String(row.done), x + cols[2].w / 2, midY); x += cols[2].w;
+
+      // In Progress count
+      g.fillStyle = row.ip > 0 ? YELLOW : "#333";
+      g.font = row.ip > 0 ? `bold 13px monospace` : `12px monospace`;
+      g.fillText(row.ip > 0 ? `▶ ${row.ip}` : "–", x + cols[3].w / 2, midY); x += cols[3].w;
+
+      // Remaining
+      g.fillStyle = "#555"; g.font = `12px monospace`;
+      g.fillText(String(row.total - row.done - row.ip), x + cols[4].w / 2, midY); x += cols[4].w;
+
+      // % Complete
+      const pc = row.pct >= 90 ? GREEN : row.pct >= 50 ? AMBER : "#888";
+      g.fillStyle = pc; g.font = `bold 13px sans-serif`;
+      g.fillText(`${row.pct.toFixed(1)}%`, x + cols[5].w / 2, midY); x += cols[5].w;
+
+      // Progress bar
+      const bw = cols[6].w - 16, bh = 9, bx = x + 8, by = y + (rowH - bh) / 2;
+      g.fillStyle = "#252525"; g.fillRect(bx, by, bw, bh);
+      const dw = Math.round(bw * Math.min(row.pct / 100, 1));
+      if (dw > 0) { g.fillStyle = row.pct >= 90 ? GREEN : row.pct >= 50 ? AMBER : NAVY; g.fillRect(bx, by, dw, bh); }
+      const iw = Math.round(bw * Math.min(row.ip / row.total, 1));
+      if (iw > 0) { g.fillStyle = YELLOW; g.fillRect(bx + dw, by, iw, bh); }
+      x += cols[6].w;
+
+      // Tower list
+      if (row.lines && row.lines.length) {
+        let ly = y + 13;
+        row.lines.forEach(line => {
+          g.fillStyle = line.isDone ? GREEN : line.isIP ? YELLOW : TEXT;
+          g.font = `10px monospace`; g.textAlign = "left";
+          // Clip drawing to tower column area
+          g.save();
+          g.beginPath();
+          g.rect(x, y, towerColW, rowH);
+          g.clip();
+          g.fillText(line.text, x + 4, ly);
+          g.restore();
+          ly += LINE_H;
+        });
+      } else {
+        g.fillStyle = MUTED; g.font = `10px sans-serif`; g.textAlign = "left";
+        g.fillText("–", x + 4, midY);
+      }
+
+      y += rowH;
+    });
+
+    // Footer
+    g.fillStyle = "#111"; g.fillRect(0, y + 4, W, FOOTER_H);
+    g.fillStyle = "#444"; g.font = `10px sans-serif`; g.textAlign = "center";
+    g.fillText("Prepared by: Murshid (Asst. Mgr – Electrical)  ·  MEW/C/5991-2023/2024  ·  L&T Construction", W / 2, y + 24);
+
+    cv.toBlob(b => {
+      const url = URL.createObjectURL(b);
+      Object.assign(document.createElement("a"), { href: url, download: `DPR-${date}.png` }).click();
+      URL.revokeObjectURL(url);
+    });
+    flash("🖼️ PNG downloaded!");
+  }
+
+  if (!daily) return (
+    <div style={{background:BG,height:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{color:AMBER,fontFamily:mono}}>Loading…</div>
+    </div>
+  );
+
+  return (
+    <div style={{background:BG,minHeight:"100vh",fontFamily:"'Segoe UI',system-ui,sans-serif",color:TEXT}}>
+
+      {toast && (
+        <div style={{position:"fixed",top:14,right:14,background:AMBER,color:"#000",
+          padding:"9px 16px",borderRadius:8,fontWeight:700,fontSize:12,zIndex:999}}>
+          {toast}
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{background:AMBER,padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontFamily:mono,fontWeight:700,fontSize:15,color:"#000"}}>MEW-5991 · DPR</div>
+          <div style={{fontSize:10,color:"#444"}}>400kV OHL Kuwait · L&T Construction</div>
+        </div>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap",alignItems:"center"}}>
+          <input type="date" value={date} onChange={e=>setDate(e.target.value)}
+            style={{background:"#000",border:"none",color:AMBER,fontFamily:mono,fontSize:12,padding:"5px 8px",borderRadius:5}}/>
+          <select value={weather} onChange={e=>setWeather(e.target.value)}
+            style={{background:"#000",border:"none",color:TEXT,fontSize:12,padding:"5px 8px",borderRadius:5}}>
+            {["Sunny","Partly Cloudy","Cloudy","Windy","Sandstorm"].map(w=><option key={w}>{w}</option>)}
+          </select>
+          <input value={temp} onChange={e=>setTemp(e.target.value)}
+            style={{background:"#000",border:"none",color:TEXT,fontFamily:mono,fontSize:12,padding:"5px 8px",borderRadius:5,width:96}}/>
+          <button onClick={downloadExcel}
+            style={{background:NAVY,color:"#fff",border:"none",borderRadius:5,padding:"6px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>
+            ⬇ Excel
+          </button>
+          <button onClick={downloadPNG}
+            style={{background:"#111",color:AMBER,border:`1px solid ${AMBER}`,borderRadius:5,padding:"6px 12px",cursor:"pointer",fontSize:12,fontWeight:600}}>
+            🖼 PNG
+          </button>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div style={{background:"#0e0e0e",padding:"7px 18px",borderBottom:`1px solid ${BORDER}`,display:"flex",gap:18,flexWrap:"wrap",alignItems:"center"}}>
+        <span style={{fontSize:10,color:MUTED,fontWeight:600,letterSpacing:1}}>CHIP STATUS:</span>
+        <div style={{display:"flex",gap:5,alignItems:"center"}}>
+          <span style={{background:"#2e2200",color:YELLOW,border:`1.5px solid #6b4f00`,borderRadius:5,padding:"3px 9px",fontSize:11,fontFamily:mono,fontWeight:700}}>▶ 8/1</span>
+          <span style={{fontSize:10,color:YELLOW}}>In Progress</span>
+        </div>
+        <div style={{display:"flex",gap:5,alignItems:"center"}}>
+          <span style={{background:"#0a2410",color:GREEN,border:`1.5px solid #155a25`,borderRadius:5,padding:"3px 9px",fontSize:11,fontFamily:mono,fontWeight:700}}>✓ 8/1</span>
+          <span style={{fontSize:10,color:GREEN}}>Completed</span>
+        </div>
+        <span style={{fontSize:10,color:MUTED}}>· Tap chip to toggle · ✕ to remove · Pre-seeded data in Excel only</span>
+      </div>
+
+      {/* Tabs */}
+      <div style={{display:"flex",background:CARD,borderBottom:`1px solid ${BORDER}`}}>
+        {[["item1","Item 1 – Khiran → Wafra 'Z'  (128)"],["item2","Item 2 – Wafra 'Z' → Sulaibiya 'Z'  (229)"]].map(([key,lbl])=>(
+          <button key={key} onClick={()=>setTab(key)}
+            style={{padding:"10px 16px",background:"none",border:"none",cursor:"pointer",
+              fontSize:13,fontWeight:tab===key?700:400,
+              color:tab===key?AMBER:MUTED,
+              borderBottom:tab===key?`2px solid ${AMBER}`:"2px solid transparent",marginBottom:-1}}>
+            {lbl}
+          </button>
+        ))}
+      </div>
+
+      {/* Activity rows */}
+      {ACTS.map((act,ai)=>{
+        const total=ALL_TOWERS[tab].length;
+        const done=countDone(tab,act.key,daily);
+        const ip=daily[tab][act.key].ip.length;
+        const pct=(done/total*100).toFixed(1);
+        const ik=`${tab}_${act.key}`;
+        const todayChips=chips(tab,act.key);
+
+        return (
+          <div key={act.key} style={{borderBottom:`1px solid ${BORDER}`,background:ai%2===0?CARD:"#0f0f0f"}}>
+            <div style={{padding:"12px 18px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10,flexWrap:"wrap",gap:8}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>{act.name}</div>
+                  <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                    <span style={{fontSize:11,color:GREEN}}>✓ {done} done</span>
+                    {ip>0&&<span style={{fontSize:11,color:YELLOW}}>▶ {ip} in progress</span>}
+                    <span style={{fontSize:11,color:MUTED}}>{total-done-ip} remaining</span>
+                    <span style={{fontSize:12,fontWeight:700,color:pct>=90?GREEN:pct>=50?AMBER:MUTED}}>{pct}%</span>
+                  </div>
+                </div>
+                <div style={{width:140,background:"#252525",borderRadius:4,height:7,overflow:"hidden",display:"flex",alignSelf:"center"}}>
+                  <div style={{width:`${done/total*100}%`,background:pct>=90?GREEN:pct>=50?AMBER:NAVY,transition:"width .3s"}}/>
+                  <div style={{width:`${ip/total*100}%`,background:YELLOW,transition:"width .3s"}}/>
+                </div>
+              </div>
+
+              <div style={{display:"flex",gap:6,marginBottom:todayChips.length?10:0}}>
+                <input
+                  ref={el=>refs.current[ik]=el}
+                  value={inputs[ik]||""}
+                  onChange={e=>setInputs(q=>({...q,[ik]:e.target.value}))}
+                  onKeyDown={e=>e.key==="Enter"&&addChips(tab,act.key,IP)}
+                  placeholder={`Type tower no. to check status or add  e.g. 7/5`}
+                  style={{flex:1,background:"#181818",border:`1px solid ${errors[ik]?"#f85149":BORDER}`,
+                    color:TEXT,fontFamily:mono,fontSize:12,padding:"7px 10px",borderRadius:6,outline:"none"}}
+                />
+                <button onClick={()=>addChips(tab,act.key,IP)} title="Add as In Progress"
+                  style={{background:"#2e2200",color:YELLOW,border:`1px solid #6b4f00`,borderRadius:6,padding:"7px 13px",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                  ▶ Add
+                </button>
+                <button onClick={()=>addChips(tab,act.key,DONE)} title="Add as Completed"
+                  style={{background:"#0a2410",color:GREEN,border:`1px solid #155a25`,borderRadius:6,padding:"7px 13px",cursor:"pointer",fontWeight:700,fontSize:12}}>
+                  ✓ Done
+                </button>
+              </div>
+
+              {errors[ik]&&<div style={{color:"#f85149",fontSize:10,marginBottom:6,fontFamily:mono}}>{errors[ik]}</div>}
+
+              {(()=>{
+                const raw=(inputs[ik]||"").trim();
+                if(!raw||errors[ik]) return null;
+                const tokens=raw.split(/[,\s;]+/).map(s=>s.trim()).filter(Boolean);
+                const vs=new Set(ALL_TOWERS[tab]);
+                const hints=tokens.map(t=>{
+                  if(!vs.has(t)) return null;
+                  const bgDone=(BG_DONE[tab][act.key]||[]).includes(t);
+                  const dyDone=daily[tab][act.key].done.includes(t);
+                  const dyIP=daily[tab][act.key].ip.includes(t);
+                  if(bgDone||dyDone) return {t,label:"✓ Done",color:GREEN,bg:"#0a2410",border:"#155a25",canDelete:dyDone&&!bgDone};
+                  if(dyIP)           return {t,label:"▶ In Progress",color:YELLOW,bg:"#2e2200",border:"#6b4f00",canDelete:true};
+                  return               {t,label:"○ Yet to Start",color:"#888",bg:"#1a1a1a",border:"#333",canDelete:false};
+                }).filter(Boolean);
+                if(!hints.length) return null;
+                return (
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8,marginTop:-4}}>
+                    {hints.map(h=>(
+                      <span key={h.t} style={{
+                        background:h.bg,color:h.color,border:`1px solid ${h.border}`,
+                        borderRadius:5,padding:"3px 9px",fontSize:11,fontFamily:mono,fontWeight:700,
+                        display:"inline-flex",alignItems:"center",gap:7
+                      }}>
+                        {h.t} — {h.label}
+                        {h.canDelete&&(
+                          <button onClick={()=>remove(tab,act.key,h.t)} style={{
+                            background:"#ff444422",color:"#ff6b6b",border:"1px solid #ff444466",
+                            borderRadius:4,padding:"1px 6px",cursor:"pointer",fontSize:10,fontWeight:700,
+                            fontFamily:mono,lineHeight:1.4
+                          }}>✕ Delete</button>
+                        )}
+                        {!h.canDelete&&(h.label==="✓ Done")&&(
+                          <span style={{fontSize:9,color:"#555",fontWeight:400}}>(pre-seeded)</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {todayChips.length>0&&(
+                <div style={{display:"flex",flexWrap:"wrap",marginTop:2}}>
+                  {todayChips.map(loc=>(
+                    <Chip key={loc} loc={loc} status={chipStatus(tab,act.key,loc)}
+                      onToggle={()=>toggle(tab,act.key,loc)}
+                      onRemove={()=>remove(tab,act.key,loc)}/>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <div style={{height:40}}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
